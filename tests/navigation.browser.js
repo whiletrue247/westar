@@ -16,7 +16,7 @@ test.before(async()=>{
   res.end(await readFile(new URL('../web/'+name,import.meta.url)));
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
- origin=`http://127.0.0.1:${server.address().port}`;
+ origin=process.env.PROPOSAL_DESK_URL||`http://127.0.0.1:${server.address().port}`;
  browser=await chromium.launch(process.env.PLAYWRIGHT_CHANNEL?{channel:process.env.PLAYWRIGHT_CHANNEL}:{});
 });
 test.after(async()=>{await browser?.close();await new Promise(resolve=>server?.close(resolve));});
@@ -33,23 +33,28 @@ async function pageAt(width){
  return page;
 }
 async function scrollState(page){return page.evaluate(()=>{
- const nav=document.getElementById('nav-list'),header=document.querySelector('header');
- return {y:scrollY,navScroll:nav.scrollTop,overflow:getComputedStyle(nav).overflowY,headerTop:header.getBoundingClientRect().top,navHeight:nav.clientHeight,navContent:nav.scrollHeight,wide:document.documentElement.scrollWidth>innerWidth};
+ const nav=document.getElementById('nav-list'),header=document.querySelector('header'),pane=document.getElementById('content-pane');
+ return {y:scrollY,paneScroll:pane.scrollTop,paneOverflow:getComputedStyle(pane).overflowY,rootOverflow:document.documentElement.scrollHeight>innerHeight,navScroll:nav.scrollTop,overflow:getComputedStyle(nav).overflowY,headerTop:header.getBoundingClientRect().top,navHeight:nav.clientHeight,navContent:nav.scrollHeight,wide:document.documentElement.scrollWidth>innerWidth};
 });}
-test('desktop and tablet: long navigation belongs to the document scroll',async()=>{
- for(const width of [1440,900,701]){
-  const page=await pageAt(width);
-  if(process.env.UI_SCREENSHOT_DIR&&width===1440)await page.screenshot({path:process.env.UI_SCREENSHOT_DIR+'/desktop.png'});
+test('desktop and tablet: content scrolls independently while navigation stays fixed',async()=>{
+ for(const [width,height] of [[1440,800],[900,500],[701,320]]){
+  const page=await pageAt(width);await page.setViewportSize({width,height});
   const before=await scrollState(page);
-  assert.equal(before.overflow,'visible');assert.equal(before.wide,false);assert.ok(before.navHeight>=before.navContent);
-  await page.mouse.move(100,300);await page.mouse.wheel(0,700);
-  await page.waitForFunction(()=>scrollY>100);
+  assert.equal(before.wide,false);assert.equal(before.rootOverflow,false);assert.equal(before.paneOverflow,'auto');
+  await page.mouse.move(width-100,200);await page.mouse.wheel(0,700);
+  await page.waitForFunction(()=>document.getElementById('content-pane').scrollTop>100);
   const after=await scrollState(page);
-  assert.equal(after.navScroll,0);assert.ok(after.headerTop<before.headerTop);
+  assert.equal(after.y,0);assert.equal(after.navScroll,0);assert.equal(after.headerTop,before.headerTop);
   await page.locator('.nav-item').last().click();
   await page.locator('#detail').waitFor({state:'visible'});
-  await page.waitForFunction(()=>scrollY===0);
+  await page.waitForFunction(()=>document.getElementById('content-pane').scrollTop===0);
   assert.equal(await page.locator('#status').isDisabled(),true);
+  const detailBefore=await scrollState(page);
+  await page.mouse.move(width-100,200);await page.mouse.wheel(0,700);
+  await page.waitForFunction(()=>document.getElementById('content-pane').scrollTop>100);
+  const detailAfter=await scrollState(page);
+  assert.equal(detailAfter.y,0);assert.equal(detailAfter.headerTop,detailBefore.headerTop);assert.equal(detailAfter.navScroll,detailBefore.navScroll);
+  if(process.env.UI_SCREENSHOT_DIR&&width===1440)await page.screenshot({path:process.env.UI_SCREENSHOT_DIR+'/desktop-fixed.png'});
   await page.close();
  }
 });
@@ -62,7 +67,7 @@ test('mobile drawer: document scroll reaches every item, selection and Escape cl
   assert.equal(await page.locator('#menu').getAttribute('aria-expanded'),'true');
   assert.equal(await page.locator('main').evaluate(el=>el.inert),true);
   if(process.env.UI_SCREENSHOT_DIR&&width===390)await page.screenshot({path:process.env.UI_SCREENSHOT_DIR+'/mobile.png'});
-  const state=await scrollState(page);assert.equal(state.overflow,'visible');assert.equal(state.wide,false);
+  const state=await scrollState(page);assert.equal(state.overflow,'visible');assert.equal(state.paneOverflow,'visible');assert.equal(state.paneScroll,0);assert.equal(state.wide,false);
   await page.mouse.move(100,300);await page.mouse.wheel(0,650);await page.waitForFunction(()=>scrollY>100);
   assert.equal((await scrollState(page)).navScroll,0);
   await page.locator('.nav-item').last().click();
