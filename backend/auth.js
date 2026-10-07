@@ -7,7 +7,7 @@ export class AuthStore{
  constructor(ctx){this.ctx=ctx;}
  async fetch(req){const {op,key,value}=await req.json();let result;
  if(op==='get')result=await this.ctx.storage.get(key);
- else if(op==='put'){await this.ctx.storage.put(key,value);await this.ctx.storage.setAlarm(Date.now()+86400000);result=true;}
+ else if(op==='put'){await this.ctx.storage.put(key,value);if(!await this.ctx.storage.getAlarm())await this.ctx.storage.setAlarm(Date.now()+86400000);result=true;}
  else if(op==='delete'){result=await this.ctx.storage.delete(key);}
  else if(op==='consume'){result=await this.ctx.storage.transaction(async tx=>{const v=await tx.get(key);await tx.delete(key);return v;});}
  else if(op==='rate'){result=await this.ctx.storage.transaction(async tx=>{const now=Date.now();let v=await tx.get(key);if(!v||v.expires<now)v={count:0,expires:now+600000};v.count++;await tx.put(key,v);return v.count<=30;});}

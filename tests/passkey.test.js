@@ -1,0 +1,20 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {generateKeyPairSync,createHash,sign,randomBytes} from 'node:crypto';import {encodeCBOR} from '@levischuck/tiny-cbor';
+import {AuthStore,session,passkey,state} from '../backend/auth.js';
+test('Real WebAuthn registration and signed authentication succeed; replay and wrong origin fail',async()=>{
+ const db=new Map(),storage={get:async key=>db.get(key),put:async(key,value)=>db.set(key,structuredClone(value)),delete:async key=>db.delete(key),transaction:async cb=>cb(storage),getAlarm:async()=>null,setAlarm:async()=>{}};
+ const store=new AuthStore({storage}),env={API_ORIGIN:'https://api.example.com',AUTH_STORE:{idFromName:()=> 'unit-only',get:()=>({fetch:async(url,init)=>store.fetch(new Request(url,init))})}},repo={member:async email=>{assert.equal(email,'owner@example.com');return {email,role:'owner',active:true};}};
+ const token=await session(env,'owner@example.com'),req=new Request(env.API_ORIGIN,{headers:{Authorization:`Bearer ${token}`}}),{options,challenge_id}=await passkey('register-options',{},env,repo,req);
+ const {privateKey,publicKey}=generateKeyPairSync('ec',{namedCurve:'prime256v1'}),jwk=publicKey.export({format:'jwk'}),key=encodeCBOR(new Map([[1,2],[3,-7],[-1,1],[-2,new Uint8Array(Buffer.from(jwk.x,'base64url'))],[-3,new Uint8Array(Buffer.from(jwk.y,'base64url'))]]));
+ const id=randomBytes(32),rpHash=createHash('sha256').update('api.example.com').digest(),idLength=Buffer.alloc(2);idLength.writeUInt16BE(id.length);
+ const authData=Buffer.concat([rpHash,Buffer.from([0x45]),Buffer.alloc(4),Buffer.alloc(16),idLength,id,Buffer.from(key)]);
+ const attestation=encodeCBOR(new Map([['fmt','none'],['authData',new Uint8Array(authData)],['attStmt',new Map()]]));
+ const response={id:id.toString('base64url'),rawId:id.toString('base64url'),type:'public-key',response:{clientDataJSON:Buffer.from(JSON.stringify({type:'webauthn.create',challenge:options.challenge,origin:env.API_ORIGIN})).toString('base64url'),attestationObject:Buffer.from(attestation).toString('base64url'),transports:['internal']},clientExtensionResults:{},authenticatorAttachment:'platform'};
+ assert.equal((await passkey('register-verify',{challenge_id,response},env,repo,req)).ok,true);assert.equal((await state(env,'get','credentials:owner@example.com')).length,1);
+ const login=await passkey('login-options',{email:'owner@example.com'},env,repo,req);const counter=Buffer.alloc(4);counter.writeUInt32BE(1);const assertionData=Buffer.concat([rpHash,Buffer.from([0x05]),counter]);
+ const clientDataJSON=Buffer.from(JSON.stringify({type:'webauthn.get',challenge:login.options.challenge,origin:env.API_ORIGIN}));const signature=sign('sha256',Buffer.concat([assertionData,createHash('sha256').update(clientDataJSON).digest()]),privateKey);
+ const assertion={id:response.id,rawId:response.rawId,type:'public-key',response:{clientDataJSON:clientDataJSON.toString('base64url'),authenticatorData:assertionData.toString('base64url'),signature:signature.toString('base64url')},clientExtensionResults:{},authenticatorAttachment:'platform'};
+ assert.ok((await passkey('login-verify',{challenge_id:login.challenge_id,response:assertion},env,repo,req)).token);
+ await assert.rejects(passkey('login-verify',{challenge_id:login.challenge_id,response:assertion},env,repo,req),e=>e.status===400);
+ const bad=await passkey('login-options',{email:'owner@example.com'},env,repo,req);const badJSON=Buffer.from(JSON.stringify({type:'webauthn.get',challenge:bad.options.challenge,origin:'https://attacker.example'}));const badSignature=sign('sha256',Buffer.concat([assertionData,createHash('sha256').update(badJSON).digest()]),privateKey);
+ await assert.rejects(passkey('login-verify',{challenge_id:bad.challenge_id,response:{...assertion,response:{...assertion.response,clientDataJSON:badJSON.toString('base64url'),signature:badSignature.toString('base64url')}}},env,repo,req),e=>e.status===401);
+});

@@ -33,7 +33,7 @@ Private responses use no-store, private and are not cached. CORS permits only th
 https://westar-proposal-api.tomben49999999.workers.dev/auth/google/callback
 ```
 
-No JavaScript origins are required for this server code flow. If the project is in Testing, add invited emails as Google test users; the private allowlist still controls actual Proposal access. The existing console project may have an existing consent-screen brand; do not overwrite the branding or scopes of other applications. Use a dedicated project if separate branding is needed.
+No JavaScript origins are required for this server code flow. This flow requests only openid/email. Google exempts identity-only requests from its test-user list requirement, even in Testing; the private allowlist controls Proposal access. The existing console project may have an existing consent-screen brand; do not overwrite the branding or scopes of other applications. Use a dedicated project if separate branding is needed.
 
 5. Store `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` with Wrangler secrets. The downloaded web-client JSON can be loaded with `node scripts/configure-google.js /absolute/path/to/web-client.json`; that helper validates the redirect and uploads secrets without logging them or adding them to Git. Client creation/credential entry remains with the account owner.
 6. `pnpm deploy:backend`. AUTH_STORE is provisioned by the migration. Preview URLs are disabled. No Cloudflare Access or Zero Trust signup, credit-card activation or third-party cookie is required.
@@ -52,7 +52,7 @@ node scripts/validate-intel.js /path/to/private/westar-intel
 
 Review the private diff, commit, and push. The site reads the main branch directly on refresh. No proposal rebuild or public redeploy is needed. Use the same ID and current expected_version for subsequent formal content revisions; retain created_at and existing status. Prior content remains in private Git history, with metadata history visible in the UI.
 
-To invite the boss, add their own email, role reviewer and active true to private `auth/members.json`; add the email to Google test users as well if the OAuth project is in Testing. An inactive or removed member cannot use an existing session. Never share GitHub accounts.
+To invite the boss, add their own email, role reviewer and active true to private `auth/members.json`; no per-user Google Cloud client or test-user setup is required for these identity-only scopes. An inactive or removed member cannot use an existing session. Never share GitHub accounts.
 
 ## Validation
 
