@@ -6,7 +6,7 @@ import {chromium} from 'playwright';
 
 // Synthetic data only; these checks never log in or write to production.
 const api='https://westar-proposal-api.tomben49999999.workers.dev';
-const proposals=Array.from({length:40},(_,i)=>({proposal_id:`fixture-${i}`,title:`測試提案 ${i} — 完整長標題與合作活動`,account:'Fixture',status:'review',version:1,created_at:'2026-10-07T00:00:00Z',updated_at:'2026-10-07T00:00:00Z'}));
+const proposals=Array.from({length:40},(_,i)=>({proposal_id:`fixture-${i}`,title:`測試提案 ${i} — 完整長標題與合作活動`,account:'Fixture',status:'review',version:1,created_at:new Date(Date.UTC(2026,8,1+i)).toISOString(),updated_at:new Date(Date.UTC(2026,10,40-i)).toISOString()}));
 let server,browser,origin;
 test.before(async()=>{
  server=createServer(async(req,res)=>{
@@ -30,6 +30,7 @@ async function pageAt(width){
  });
  await page.goto(origin);
  await page.locator('.nav-item').last().waitFor({state:'attached'});
+ assert.deepEqual(await page.locator('.nav-item').allTextContents(),proposals.slice().reverse().map(p=>p.title));
  return page;
 }
 async function scrollState(page){return page.evaluate(()=>{
