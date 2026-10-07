@@ -86,6 +86,23 @@ test('mobile drawer: document scroll reaches every item, selection and Escape cl
   await page.close();
  }
 });
+test('detail export button opens print flow and print media removes app chrome',async()=>{
+ const page=await pageAt(1440);
+ await page.locator('.nav-item').first().click();
+ await page.locator('#detail').waitFor({state:'visible'});
+ assert.equal(await page.locator('#export-pdf').isVisible(),true);
+ await page.evaluate(()=>{window.__printCalled=false;window.print=()=>{window.__printCalled=true;window.dispatchEvent(new Event('afterprint'));};});
+ const originalTitle=await page.title();
+ await page.locator('#export-pdf').click();
+ assert.equal(await page.evaluate(()=>window.__printCalled),true);
+ assert.equal(await page.title(),originalTitle);
+ await page.emulateMedia({media:'print'});
+ assert.equal(await page.locator('header').evaluate(el=>getComputedStyle(el).display),'none');
+ assert.equal(await page.locator('#detail').evaluate(el=>getComputedStyle(el).display),'block');
+ assert.equal(await page.locator('#export-pdf').evaluate(el=>getComputedStyle(el).display),'none');
+ assert.equal(await page.locator('#body').evaluate(el=>getComputedStyle(el).color),'rgb(17, 17, 17)');
+ await page.close();
+});
 test('frontend CSP blocks injected inline scripts and foreign connections; login popup still opens',async()=>{
  const page=await browser.newPage();await page.goto(origin);
  await page.evaluate(()=>{const s=document.createElement('script');s.textContent='window.unsafeScriptRan=true';document.body.append(s);});
