@@ -4,7 +4,7 @@ const storageKey='westar.session.v1';let token=localStorage.getItem(storageKey),
 const notice=text=>$('notice').textContent=text;
 const date=s=>new Date(s).toLocaleString('zh-TW',{timeZone:'Asia/Taipei',hour12:false});
 export function mailto(mail){return `mailto:${encodeURIComponent(mail.to)}?subject=${encodeURIComponent(mail.subject)}&body=${encodeURIComponent(mail.body.replace(/\r?\n/g,'\r\n'))}`;}
-function reset(){generation++;token=null;localStorage.removeItem(storageKey);proposals=[];selected=null;user=null;for(const id of ['body','account','title','meta','history','mail-note','sync'])$(id).textContent='';$('list').replaceChildren();$('nav-list').replaceChildren();for(const id of ['mailbody','to','subject'])$(id).value='';$('mailto').removeAttribute('href');$('login').hidden=false;$('desk').hidden=true;$('detail').hidden=true;$('logout').hidden=true;$('identity').textContent='';}
+function reset(){closeNavigation();generation++;token=null;localStorage.removeItem(storageKey);proposals=[];selected=null;user=null;for(const id of ['body','account','title','meta','history','mail-note','sync'])$(id).textContent='';$('list').replaceChildren();$('nav-list').replaceChildren();for(const id of ['mailbody','to','subject'])$(id).value='';$('mailto').removeAttribute('href');$('login').hidden=false;$('desk').hidden=true;$('detail').hidden=true;$('logout').hidden=true;$('identity').textContent='';}
 async function api(path,opts={}){if(!config.apiBase)throw new Error('登入服務正在配置，尚未開放提案存取。');const res=await fetch(config.apiBase+path,{...opts,cache:'no-store',headers:{Authorization:`Bearer ${token||''}`,...(opts.body?{'Content-Type':'application/json'}:{}),...opts.headers}});if(res.status===401||res.status===403){reset();throw new Error(res.status===403?'此 Email 尚未受邀或權限已撤銷。':'請重新登入。');}const data=await res.json();if(!res.ok)throw new Error(data.error||'讀取失敗，請稍後重試。');return data;}
 function node(tag,text,cls){const el=document.createElement(tag);el.textContent=text;if(cls)el.className=cls;return el;}
 function render(){const nav=proposals.map(p=>{const b=node('button',p.title,'nav-item'+(location.hash.slice(1)===p.proposal_id?' active':''));b.onclick=()=>{location.hash=p.proposal_id;closeNavigation();};return b;});$('nav-list').replaceChildren(...nav);const term=$('search').value.trim().toLowerCase(),status=$('filter').value;const matches=proposals.filter(p=>(!status||p.status===status)&&`${p.account} ${p.title}`.toLowerCase().includes(term));$('list').replaceChildren(...matches.map(p=>{const b=node('button','','card');const content=node('div','');content.append(node('div',p.account,'eyebrow'),node('h2',p.title),node('p',`更新 ${date(p.updated_at)} · v${p.version}`,'small'));b.append(content,node('span',labels[p.status],'badge'));b.addEventListener('click',()=>{location.hash=p.proposal_id;});return b;}));$('empty').hidden=!!matches.length;}
@@ -20,7 +20,31 @@ if(token)load().catch(e=>notice(e.message));
 
 const savedTheme=localStorage.getItem('westar.theme');if(savedTheme==='light')document.documentElement.dataset.theme='light';function themeLabel(){$('theme').textContent=document.documentElement.dataset.theme==='light'?'切換深色':'切換淺色';}themeLabel();$('theme').onclick=()=>{const theme=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=theme;localStorage.setItem('westar.theme',theme);themeLabel();};
 
-function closeNavigation(){document.body.classList.remove('mobile-nav-open');$('menu').setAttribute('aria-expanded','false');$('nav-overlay').hidden=true;} $('menu').onclick=()=>{const open=document.body.classList.toggle('mobile-nav-open');$('menu').setAttribute('aria-expanded',String(open));$('nav-overlay').hidden=!open;};$('nav-overlay').onclick=closeNavigation;document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNavigation();});
+let navigationScroll=0;
+const mobileNavigation=window.matchMedia('(max-width:700px)');
+function closeNavigation(){
+ const wasOpen=document.body.classList.contains('mobile-nav-open');
+ document.body.classList.remove('mobile-nav-open');
+ $('menu').setAttribute('aria-expanded','false');
+ $('menu').setAttribute('aria-label','開啟提案導覽');
+ $('nav-overlay').hidden=true;
+ document.querySelector('main').inert=false;
+ if(wasOpen){window.scrollTo({top:navigationScroll});$('menu').focus({preventScroll:true});}
+}
+$('menu').onclick=()=>{
+ if(document.body.classList.contains('mobile-nav-open')){closeNavigation();return;}
+ if(!mobileNavigation.matches)return;
+ navigationScroll=window.scrollY;
+ document.body.classList.add('mobile-nav-open');
+ $('menu').setAttribute('aria-expanded','true');
+ $('menu').setAttribute('aria-label','關閉提案導覽');
+ $('nav-overlay').hidden=false;
+ document.querySelector('main').inert=true;
+ window.scrollTo({top:0});
+};
+$('nav-overlay').onclick=closeNavigation;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNavigation();});
+mobileNavigation.addEventListener('change',closeNavigation);
 
 function renderProposal(content,raw=false){const body=$('body');body.classList.toggle('raw',raw);body.replaceChildren();if(raw){body.textContent=content;return;}const display=content.replace(/\ue200entity\ue202\["[^"\n]*","([^"\n]*)"[^\n]*?\]\ue201/g,'$1').replace(/\ue200url\ue202([^\ue202]+)\ue202(https?:\/\/[^\ue201]+)\ue201/g,'[$1]($2)').replace(/\ue200(?:map|cite|memcite)(?:\ue202[^\ue201]*)?\ue201/g,'').replace(/\ue200(?:image_group|navlist|video|product|products|genui)\ue202[^\ue201]*\ue201/g,'').replace(/\ue200[^\ue201]*\ue201/g,'').replace(/:chatgpt-content-reference\{index="(\d+)"\}/g,'〔來源 $1〕').replace(/\n{3,}/g,'\n\n').trim();for(const block of display.split(/\n\s*\n/)){const paragraph=node('p','');let cursor=0;const pattern=/\*\*([^*]+)\*\*|`([^`\n]+)`|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;for(const match of block.matchAll(pattern)){paragraph.append(document.createTextNode(block.slice(cursor,match.index)));if(match[1])paragraph.append(node('strong',match[1]));else if(match[2])paragraph.append(node('code',match[2]));else{const link=node('a',match[3]);link.href=match[4];link.target='_blank';link.rel='noopener noreferrer';paragraph.append(link);}cursor=match.index+match[0].length;}paragraph.append(document.createTextNode(block.slice(cursor)));body.append(paragraph);}}
 $('raw-toggle').onclick=()=>{if(!selected)return;const raw=$('raw-toggle').getAttribute('aria-pressed')!=='true';$('raw-toggle').setAttribute('aria-pressed',String(raw));$('raw-toggle').textContent=raw?'返回閱讀格式':'查看原文';renderProposal(selected.content,raw);};

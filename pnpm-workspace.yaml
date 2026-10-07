@@ -1,3 +1,7 @@
 allowBuilds:
   esbuild: true
   workerd: true
+
+# GHSA-wq5f-xc86-pv6w: patch the Wrangler/Miniflare development dependency.
+overrides:
+  sharp: 0.35.5
