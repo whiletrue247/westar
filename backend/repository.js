@@ -3,7 +3,7 @@ export class ApiError extends Error{constructor(status,message){super(message);t
 const enc=s=>btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 const dec=s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g,'')),c=>c.charCodeAt(0)));
 export class Repository{
- constructor(env,fetcher=fetch){this.env=env;this.fetcher=fetcher;}
+ constructor(env,fetcher=(input,init)=>fetch(input,init)){this.env=env;this.fetcher=fetcher;}
  async request(path,opts={}){if(!this.env.GITHUB_TOKEN)throw new ApiError(503,'私有資料服務尚未配置。');const r=await this.fetcher(`https://api.github.com/repos/whiletrue247/westar-intel/${path}`,{...opts,headers:{Authorization:`Bearer ${this.env.GITHUB_TOKEN}`,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28','User-Agent':'westar-proposal-desk',...(opts.body?{'Content-Type':'application/json'}:{})},cache:'no-store'});if(!r.ok)throw new ApiError(r.status===404?404:r.status===409||r.status===422?409:503,r.status===404?'找不到提案。':r.status===409||r.status===422?'資料已更新，請重新整理後再操作。':'私有資料暫時無法讀取。');return r.json();}
  async file(path){const d=await this.request('contents/'+path+'?ref=main');if(!d.content)throw new ApiError(503,'資料格式不正確。');return {value:JSON.parse(dec(d.content)),sha:d.sha};}
  async member(email){const {value}=await this.file('auth/members.json');const m=value.members.find(x=>x.email.toLowerCase()===email.toLowerCase()&&x.active);if(!m||!['owner','reviewer','viewer'].includes(m.role))throw new ApiError(403,'此 Email 尚未受邀。');return m;}

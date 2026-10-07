@@ -26,6 +26,6 @@ export default{
  if(match&&!match[2]&&req.method==='GET')return json({proposal:(await repo.proposal(match[1])).value},200,cors);
  if(match&&match[2]&&req.method==='PATCH'){const raw=await req.text();if(raw.length>1024)throw new ApiError(413,'請求過大。');return json({proposal:await repo.status(match[1],JSON.parse(raw),auth.member)},200,cors);}
  throw new ApiError(404,'找不到此操作。');
- }catch(e){return json({error:e instanceof ApiError?e.message:e instanceof SyntaxError?'請求格式錯誤。':'服務暫時無法使用。'},e instanceof ApiError?e.status:e instanceof SyntaxError?400:503,cors);}
+ }catch(e){if(!(e instanceof ApiError)&&!(e instanceof SyntaxError))console.error('WESTAR unexpected failure',e?.name,String(e?.message).replace(/GOCSPX-[\w-]+/g,'[redacted]').slice(0,300));return json({error:e instanceof ApiError?e.message:e instanceof SyntaxError?'請求格式錯誤。':'服務暫時無法使用。'},e instanceof ApiError?e.status:e instanceof SyntaxError?400:503,cors);}
  }
 };
