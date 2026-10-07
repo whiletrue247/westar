@@ -1,5 +1,6 @@
 import {Repository,ApiError} from './repository.js';
-import {accessIdentity,session,authenticated,passkey,state,hash} from './auth.js';
+import {session,authenticated,passkey,state,hash} from './auth.js';
+import {googleStart,googleCallback} from './google.js';
 import popupScript from './generated/popup.js';
 export {AuthStore} from './auth.js';
 const baseHeaders={'Cache-Control':'no-store, private','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'"};
@@ -10,10 +11,11 @@ export default{
  try{
  if(origin&&origin!==allowed&&origin!==url.origin)return json({error:'來源不允許。'},403);
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers:{...baseHeaders,...cors}});
- if(url.pathname==='/health'&&req.method==='GET')return json({ok:true,auth_configured:!!(env.ACCESS_TEAM&&env.ACCESS_AUD)},200,cors);
+ if(url.pathname==='/health'&&req.method==='GET')return json({ok:true,auth_configured:!!(env.GOOGLE_CLIENT_ID&&env.GOOGLE_CLIENT_SECRET)},200,cors);
  if(url.pathname==='/passkey-ui.js'&&req.method==='GET')return new Response(popupScript,{headers:{...baseHeaders,'Content-Type':'application/javascript; charset=utf-8'}});
  const repo=new Repository(env);
- if(url.pathname==='/auth/start'&&req.method==='GET'){const stateValue=url.searchParams.get('state');if(!stateValue?.match(/^[a-f0-9-]{36}$/))throw new ApiError(400,'請從工作台開啟登入。');const email=await accessIdentity(req,env);await repo.member(email);return html({state:stateValue,origin:allowed,token:await session(env,email)});}
+ if(url.pathname==='/auth/start'&&req.method==='GET')return await googleStart(req,env);
+ if(url.pathname==='/auth/google/callback'&&req.method==='GET'){const response=html(await googleCallback(req,env,repo));response.headers.set('Set-Cookie','__Host-westar-oauth=; Secure; HttpOnly; SameSite=Lax; Path=/; Max-Age=0');return response;}
  if(url.pathname==='/passkey'&&req.method==='GET'){const stateValue=url.searchParams.get('state');if(!stateValue?.match(/^[a-f0-9-]{36}$/))throw new ApiError(400,'請從工作台開啟登入。');return html({state:stateValue,origin:allowed,mode:url.searchParams.get('mode')==='register'?'register':'login'});}
  if(url.pathname.startsWith('/api/passkey/')&&req.method==='POST'){if(Number(req.headers.get('Content-Length')||0)>32768)throw new ApiError(413,'請求過大。');const raw=await req.text();if(raw.length>32768)throw new ApiError(413,'請求過大。');const route=url.pathname.slice('/api/passkey/'.length);if(route.startsWith('login-')){const ok=await state(env,'rate','rate:'+await hash(req.headers.get('CF-Connecting-IP')||'local'));if(!ok)throw new ApiError(429,'請稍後再試。');}return json(await passkey(route,JSON.parse(raw),env,repo,req),200,cors);}
  if(!url.pathname.startsWith('/api/'))throw new ApiError(404,'找不到此頁面。');

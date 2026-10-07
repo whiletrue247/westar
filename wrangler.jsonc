@@ -10,9 +10,7 @@
   "preview_urls": false,
   "vars": {
     "FRONTEND_ORIGIN": "https://whiletrue247.github.io",
-    "API_ORIGIN": "https://westar-proposal-api.tomben49999999.workers.dev",
-    "ACCESS_TEAM": "",
-    "ACCESS_AUD": ""
+    "API_ORIGIN": "https://westar-proposal-api.tomben49999999.workers.dev"
   },
   "durable_objects": {
     "bindings": [

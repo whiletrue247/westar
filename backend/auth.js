@@ -1,11 +1,8 @@
-import {createRemoteJWKSet,jwtVerify} from 'jose';
 import {generateRegistrationOptions,verifyRegistrationResponse,generateAuthenticationOptions,verifyAuthenticationResponse} from '@simplewebauthn/server';
 import {ApiError} from './repository.js';
 export const ttl=30*24*3600;
 export const random=()=>crypto.randomUUID()+crypto.randomUUID();
 export async function hash(s){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(d),x=>x.toString(16).padStart(2,'0')).join('');}
-const jwks=new Map();
-export async function accessIdentity(request,env){if(!env.ACCESS_TEAM||!env.ACCESS_AUD)throw new ApiError(503,'首次登入服務尚未啟用。');const team=env.ACCESS_TEAM;if(!/^[a-z0-9-]+$/.test(team))throw new ApiError(503,'登入服務配置錯誤。');const token=request.headers.get('Cf-Access-Jwt-Assertion');if(!token)throw new ApiError(401,'請先驗證 Email。');if(!jwks.has(team))jwks.set(team,createRemoteJWKSet(new URL(`https://${team}.cloudflareaccess.com/cdn-cgi/access/certs`)));try{const {payload}=await jwtVerify(token,jwks.get(team),{issuer:`https://${team}.cloudflareaccess.com`,audience:env.ACCESS_AUD,algorithms:['RS256']});if(typeof payload.email!=='string'||payload.type!=='app')throw new Error();return payload.email.toLowerCase();}catch{throw new ApiError(401,'登入驗證失敗。');}}
 export class AuthStore{
  constructor(ctx){this.ctx=ctx;}
  async fetch(req){const {op,key,value}=await req.json();let result;
