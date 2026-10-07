@@ -17,3 +17,38 @@
 #status{background:#242424;border-color:#3b3b3b}
 @media(max-width:1000px){main{max-width:900px}}
 @media(max-width:700px){body{font-size:16px}.original{font-size:17px;line-height:1.75}main{padding:24px 20px 64px}}
+
+
+.detail-controls{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}.detail-controls>button{white-space:nowrap}.detail-controls label{min-width:120px}
+@media(max-width:700px){.detail-controls{width:100%;align-items:flex-end}.detail-controls>button{min-height:40px}.detail-controls label{margin-left:auto}}
+
+@page{size:A4;margin:16mm 17mm 18mm}
+@media print{
+ :root,:root[data-theme=light]{color-scheme:light;--ink:#111;--muted:#555;--paper:#fff;--sidebar:#fff;--surface:#fff;--line:#ddd;--hover:#fff;--primary:#111;--on-primary:#fff}
+ html,body{height:auto!important;min-height:0!important;overflow:visible!important;background:#fff!important;color:#111!important;font-size:11pt!important}
+ body{margin:0!important}
+ header,#nav-overlay,footer,#notice,#back,.detail-controls,.proposal-format,details{display:none!important}
+ #content-pane{height:auto!important;min-height:0!important;margin:0!important;overflow:visible!important}
+ main{max-width:none!important;width:auto!important;margin:0!important;padding:0!important}
+ #login,#desk{display:none!important}
+ #detail{display:block!important}
+ #detail>.heading{display:block!important;margin:0 0 9mm!important;padding-bottom:5mm;border-bottom:1px solid #ddd}
+ #detail .heading .eyebrow{font-size:9pt!important;color:#555!important}
+ #detail .heading h1{font-size:22pt!important;line-height:1.25!important;margin:2mm 0 2mm!important;color:#111!important}
+ #detail .heading #meta{font-size:9pt!important;color:#666!important;margin:0!important}
+ .detail-grid{display:block!important}
+ article,aside{width:100%!important;max-width:none!important;background:#fff!important;border:0!important;border-radius:0!important;padding:0!important;box-shadow:none!important}
+ article>.section-label{font-size:9pt!important;color:#666!important;margin-bottom:5mm!important}
+ .original{font-size:11pt!important;line-height:1.65!important;margin:0!important;color:#111!important;letter-spacing:0!important}
+ .original p{color:#111!important;margin:0 0 5mm!important;orphans:3;widows:3;break-inside:auto}
+ .original strong{color:#111!important}.original code{background:#f3f3f3!important;color:#111!important;border:1px solid #e2e2e2;white-space:normal!important}
+ .original a{color:#111!important;text-decoration:underline!important;overflow-wrap:anywhere}
+ #mail-panel{display:block!important;margin-top:11mm!important;padding-top:7mm!important;border-top:1px solid #ccc!important;break-before:auto}
+ #mail-panel .section-label{font-size:13pt!important;margin-bottom:3mm!important}
+ #mail-panel label{font-size:8.5pt!important;color:#666!important;margin:3mm 0!important;break-inside:avoid}
+ #mail-panel input,#mail-panel textarea{border:0!important;background:#fff!important;color:#111!important;padding:0!important;margin-top:1mm!important;font-size:10pt!important;line-height:1.55!important;min-height:0!important;resize:none!important;overflow:visible!important}
+ #mail-panel textarea{height:auto!important;min-height:0!important;white-space:pre-wrap!important}
+ .mail-actions,#mail-panel>.small:last-child{display:none!important}
+ h1,h2,h3,.section-label{break-after:avoid-page}
+ article,aside,.original{break-inside:auto}
+}
