@@ -6,7 +6,7 @@ import {chromium} from 'playwright';
 
 // Synthetic data only; these checks never log in or write to production.
 const api='https://westar-proposal-api.tomben49999999.workers.dev';
-const proposals=Array.from({length:40},(_,i)=>({proposal_id:`fixture-${i}`,title:`測試提案 ${i} — 完整長標題與合作活動`,account:'Fixture',status:'review',version:1,created_at:new Date(Date.UTC(2026,8,1+i)).toISOString(),updated_at:new Date(Date.UTC(2026,10,40-i)).toISOString()}));
+const proposals=Array.from({length:40},(_,i)=>({proposal_id:`fixture-${i}`,title:`測試提案 ${i} — 完整長標題與合作活動`.repeat(i===39?5:1),account:'Fixture',status:'review',version:1,created_at:new Date(Date.UTC(2026,8,1+i)).toISOString(),updated_at:new Date(Date.UTC(2026,10,40-i)).toISOString()}));
 let server,browser,origin;
 test.before(async()=>{
  server=createServer(async(req,res)=>{
@@ -41,6 +41,7 @@ test('desktop and tablet: content scrolls independently while navigation stays f
  for(const [width,height] of [[1440,800],[900,500],[701,320]]){
   const page=await pageAt(width);await page.setViewportSize({width,height});
   const before=await scrollState(page);
+  assert.equal(await page.locator('.nav-item').evaluateAll(items=>items.every((item,i)=>item.scrollHeight<=item.clientHeight+1&&(!i||item.getBoundingClientRect().top>=items[i-1].getBoundingClientRect().bottom))),true,'Long navigation labels must fit their rows without overlapping');
   assert.equal(before.wide,false);assert.equal(before.rootOverflow,false);assert.equal(before.paneOverflow,'auto');
   await page.mouse.move(width-100,200);await page.mouse.wheel(0,700);
   await page.waitForFunction(()=>document.getElementById('content-pane').scrollTop>100);
