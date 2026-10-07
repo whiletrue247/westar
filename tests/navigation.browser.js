@@ -6,7 +6,8 @@ import {chromium} from 'playwright';
 
 // Synthetic data only; these checks never log in or write to production.
 const api='https://westar-proposal-api.tomben49999999.workers.dev';
-const proposals=Array.from({length:40},(_,i)=>({proposal_id:`fixture-${i}`,title:`測試提案 ${i} — 完整長標題與合作活動`.repeat(i===39?5:1),account:'Fixture',status:'review',version:1,created_at:new Date(Date.UTC(2026,8,1+i)).toISOString(),updated_at:new Date(Date.UTC(2026,10,40-i)).toISOString()}));
+const fixtureStatus=i=>i===0?'rejected':i===1?'cooling':i===2?'sent':i===3?'waiting':'review';
+const proposals=Array.from({length:40},(_,i)=>({proposal_id:`fixture-${i}`,title:`測試提案 ${i} — 完整長標題與合作活動`.repeat(i===39?5:1),account:'Fixture',status:fixtureStatus(i),version:1,created_at:new Date(Date.UTC(2026,8,1+i)).toISOString(),updated_at:new Date(Date.UTC(2026,10,40-i)).toISOString()}));
 let server,browser,origin;
 test.before(async()=>{
  server=createServer(async(req,res)=>{
@@ -26,7 +27,7 @@ async function pageAt(width){
  await page.route(api+'/**',route=>{
   const path=new URL(route.request().url()).pathname;
   const p=proposals.find(p=>path.endsWith('/'+p.proposal_id));
-  return route.fulfill({json:p?{proposal:{...p,content:'Long proposal paragraph.\n\n'.repeat(100),history:[]}}:{member:{email:'fixture@example.invalid',role:'viewer'},proposals,fetched_at:'2026-10-07T00:00:00Z'}});
+  return route.fulfill({json:p?{proposal:{...p,content:'Long proposal paragraph.\n\n'.repeat(100),history:[],mail:{to:'fixture@example.invalid',subject:'Fixture subject',body:'Fixture body',...(['sent','waiting'].includes(p.status)?{sent_at:'2026-10-07T00:00:00Z'}:{})}}}:{member:{email:'fixture@example.invalid',role:'viewer'},proposals,fetched_at:'2026-10-07T00:00:00Z'}});
  });
  await page.goto(origin);
  await page.locator('.nav-item').last().waitFor({state:'attached'});
@@ -87,6 +88,29 @@ test('mobile drawer: document scroll reaches every item, selection and Escape cl
   await page.close();
  }
 });
+test('proposal mail actions respect decision status',async()=>{
+ const page=await pageAt(1440);
+ const cases=[
+  ['fixture-0',false,false],
+  ['fixture-1',false,false],
+  ['fixture-2',true,false],
+  ['fixture-3',true,false],
+  ['fixture-4',true,true]
+ ];
+ for(const [id,panelVisible,actionable] of cases){
+  await page.evaluate(id=>{location.hash=id;},id);
+  await page.locator('#detail').waitFor({state:'visible'});
+  assert.equal(await page.locator('#mail-panel').isVisible(),panelVisible,id+' panel visibility');
+  if(panelVisible){
+   assert.equal(await page.locator('#mailto').isVisible(),actionable,id+' mailto visibility');
+   assert.equal(await page.locator('#copy').isVisible(),actionable,id+' copy visibility');
+   const href=await page.locator('#mailto').getAttribute('href');
+   assert.equal(actionable?href?.startsWith('mailto:'):href===null,true,id+' mailto action');
+  }
+ }
+ await page.close();
+});
+
 test('detail export button opens print flow and print media removes app chrome',async()=>{
  const page=await pageAt(1440);
  await page.locator('.nav-item').first().click();
