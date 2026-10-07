@@ -1,0 +1,33 @@
+{
+  "name": "westar-proposal-api",
+  "main": "backend/worker.js",
+  "account_id": "ce7a26472962dced6fbe7c66b24706f6",
+  "compatibility_date": "2026-10-07",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "FRONTEND_ORIGIN": "https://whiletrue247.github.io",
+    "API_ORIGIN": "https://westar-proposal-api.tomben49999999.workers.dev",
+    "ACCESS_TEAM": "",
+    "ACCESS_AUD": ""
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AUTH_STORE",
+        "class_name": "AuthStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "AuthStore"
+      ]
+    }
+  ]
+}
