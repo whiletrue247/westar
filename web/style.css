@@ -43,7 +43,7 @@
  .original p{color:#111!important;margin:0 0 5mm!important;orphans:3;widows:3;break-inside:auto}
  .original strong{color:#111!important}.original code{background:#f3f3f3!important;color:#111!important;border:1px solid #e2e2e2;white-space:normal!important}
  .original a{color:#111!important;text-decoration:underline!important;overflow-wrap:anywhere}
- #mail-panel{display:block!important;margin-top:11mm!important;padding-top:7mm!important;border-top:1px solid #ccc!important;break-before:auto}
+ #mail-panel{display:block!important;margin-top:11mm!important;padding-top:7mm!important;border-top:1px solid #ccc!important;break-before:auto}#mail-panel[hidden]{display:none!important}
  #mail-panel .section-label{font-size:13pt!important;margin-bottom:3mm!important}
  #mail-panel label{font-size:8.5pt!important;color:#666!important;margin:3mm 0!important;break-inside:avoid}
  #mail-panel input,#mail-panel textarea{border:0!important;background:#fff!important;color:#111!important;padding:0!important;margin-top:1mm!important;font-size:10pt!important;line-height:1.55!important;min-height:0!important;resize:none!important;overflow:visible!important}
