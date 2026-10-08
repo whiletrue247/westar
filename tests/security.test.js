@@ -22,3 +22,25 @@ test('Default repository fetch preserves the platform fetch receiver',async()=>{
 test('Proposal formatting uses safe text nodes and raw view preserves exact content',async()=>{const source=await readFile('web/app.js','utf8');const makeNode=(tag,text='')=>({tag,textContent:text,children:[],append(...nodes){this.children.push(...nodes);},replaceChildren(){this.children=[];this.textContent='';},classList:{toggle(){}}});const body=makeNode('div');const document={createTextNode:text=>makeNode('#text',text)};const render=new Function('$','node','document',source.match(/^function renderProposal[^\n]+/m)[0]+';return renderProposal;')(()=>body,makeNode,document);const input='Hello **bold** <script>alert(1)</script> [unsafe](javascript:alert)\n\n[Link](https://example.com)';render(input);const children=body.children.flatMap(p=>p.children);assert.ok(children.some(n=>n.tag==='strong'&&n.textContent==='bold'));assert.ok(children.some(n=>n.tag==='#text'&&n.textContent.includes('<script>')));assert.deepEqual(children.filter(n=>n.tag==='a').map(n=>n.href),['https://example.com']);render(input,true);assert.equal(body.textContent,input);});
 
 test('Proposal reading view hides ChatGPT UI tokens while raw view stays exact',async()=>{const source=await readFile('web/app.js','utf8');const makeNode=(tag,text='')=>({tag,textContent:text,children:[],append(...nodes){this.children.push(...nodes);},replaceChildren(){this.children=[];this.textContent='';},classList:{toggle(){}}});const body=makeNode('div');const document={createTextNode:text=>makeNode('#text',text)};const render=new Function('$','node','document',source.match(/^function renderProposal[^\n]+/m)[0]+';return renderProposal;')(()=>body,makeNode,document);const input='map\n\nMeet entity["organization","Model Entrepreneur Competition","MEC"]. citeturn1search0\n\nurlOfficial pagehttps://officialmec.org/';render(input);const children=body.children.flatMap(p=>p.children),visible=children.map(n=>n.textContent).join('');assert.ok(!visible.includes(''));assert.ok(visible.includes('Model Entrepreneur Competition'));assert.ok(children.some(n=>n.tag==='a'&&n.href==='https://officialmec.org/'));render(input,true);assert.equal(body.textContent,input);});
+
+
+test('Publisher computes missing content SHA-256 while rejecting an incorrect supplied hash',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'westar-auto-sha-test-')),input=join(dir,'input.json'),target=join(dir,'private');
+ await mkdir(target);
+ await writeFile(join(target,'.westar-intel.json'),JSON.stringify({repository:'whiletrue247/westar-intel',visibility:'private'}));
+ const p=proposal(),source={...p.source};
+ delete source.sha256;
+ await writeFile(input,JSON.stringify({...p,proposal_id:'auto-sha-test',source}));
+ const run=()=>spawnSync(process.execPath,['scripts/publish-proposal.js',input,target],{encoding:'utf8'});
+ let result=run();
+ assert.equal(result.status,0,result.stderr);
+ const stored=JSON.parse(await readFile(join(target,'proposals','auto-sha-test.json'),'utf8'));
+ const expected=createHash('sha256').update(p.content,'utf8').digest('hex');
+ assert.equal(stored.content,p.content);
+ assert.equal(stored.source.sha256,expected);
+ assert.equal(stored.history.at(-1).content_sha256,expected);
+ await verifyContentHash(stored);
+ await writeFile(input,JSON.stringify({...p,proposal_id:'bad-sha-test',source:{...p.source,sha256:'0'.repeat(64)}}));
+ result=run();
+ assert.notEqual(result.status,0,'Explicitly incorrect hash must not be silently overwritten');
+});
