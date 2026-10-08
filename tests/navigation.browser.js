@@ -100,6 +100,8 @@ test('proposal mail actions respect decision status',async()=>{
  for(const [id,panelVisible,actionable] of cases){
   await page.evaluate(id=>{location.hash=id;},id);
   await page.locator('#detail').waitFor({state:'visible'});
+  // Route requests are asynchronous: wait for this specific Proposal, not stale prior detail.
+  await page.waitForFunction(title=>document.getElementById('title').textContent===title,proposals.find(p=>p.proposal_id===id).title);
   assert.equal(await page.locator('#mail-panel').isVisible(),panelVisible,id+' panel visibility');
   if(panelVisible){
    assert.equal(await page.locator('#mailto').isVisible(),actionable,id+' mailto visibility');
