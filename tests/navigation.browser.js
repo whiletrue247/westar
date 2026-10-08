@@ -126,7 +126,8 @@ test('detail export button opens print flow and print media removes app chrome',
  assert.equal(await page.locator('#detail').evaluate(el=>getComputedStyle(el).display),'block');
  assert.equal(await page.locator('.detail-controls').evaluate(el=>getComputedStyle(el).display),'none');
  assert.equal(await page.locator('#export-pdf').isVisible(),false);
- assert.equal(await page.locator('#mail-panel').evaluate(el=>getComputedStyle(el).display),'none');
+ // The print layout intentionally includes an available prepared-mail section.
+ assert.equal(await page.locator('#mail-panel').evaluate(el=>getComputedStyle(el).display),'block');
  assert.equal(await page.locator('#body').evaluate(el=>getComputedStyle(el).color),'rgb(17, 17, 17)');
  await page.close();
 });
