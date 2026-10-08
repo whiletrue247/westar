@@ -1,17 +1,35 @@
-export const statuses = new Set(['review','sent','waiting','rejected','cooling']);
+// Proposal content is freeform. This module validates only the storage/security boundary,
+// not the commercial reasoning, narrative structure, or AI's research method.
+export const statuses=new Set(['review','sent','waiting','rejected','cooling']);
+const idPattern=/^[a-z0-9][a-z0-9-]{2,79}$/;
+const forbidden=['conversation','turns','messages','tool_output','user_message'];
 export function validateProposal(p){
  if(!p||typeof p!=='object'||Array.isArray(p))throw new Error('Proposal object required');
- if(p.marker!=='WESTAR_PROPOSAL'||p.source?.role!=='assistant'||p.source?.kind!=='final_proposal'||p.source?.action!=='publish')throw new Error('Only explicitly published formal assistant proposals are accepted');
- if(!/^[a-z0-9][a-z0-9-]{2,79}$/.test(p.proposal_id))throw new Error('Invalid proposal_id');
- for(const k of ['account','title','content','created_at','updated_at'])if(typeof p[k]!=='string'||!p[k].trim())throw new Error(`Missing ${k}`);
- for(const k of ['created_at','updated_at'])if(!/^\d{4}-\d\d-\d\dT/.test(p[k])||!Number.isFinite(Date.parse(p[k])))throw new Error(`Invalid ${k}`);
- if(!statuses.has(p.status)||!Number.isSafeInteger(p.version)||p.version<1)throw new Error('Invalid version/status');
- if(!p.source.message_id||!p.source.conversation_id||!p.source.sha256?.match(/^[a-f0-9]{64}$/))throw new Error('Source provenance is required');
- if(!p.mail||typeof p.mail!=='object'||Array.isArray(p.mail))throw new Error('Mail state is required');
- if(p.mail.available===false){}
- else if(!p.mail.to?.match(/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/)||typeof p.mail.body!=='string'||!p.mail.subject||/[\r\n]/.test(p.mail.subject))throw new Error('Invalid prepared mail');
- if(!Array.isArray(p.history)||!p.history.length||p.history.at(-1).version!==p.version)throw new Error('Version history required');
- for(const key of ['conversation','turns','messages','tool_output','user_message'])if(key in p)throw new Error('Conversation payloads are forbidden');
+ if(!idPattern.test(p.proposal_id||''))throw new Error('Invalid proposal_id');
+ if(typeof p.content!=='string'||!p.content.trim())throw new Error('Non-empty Proposal content required');
+ for(const key of forbidden)if(Object.prototype.hasOwnProperty.call(p,key))throw new Error('Conversation payloads are forbidden');
+ for(const key of ['account','title','created_at','updated_at'])
+  if(p[key]!==undefined&&typeof p[key]!=='string')throw new Error('Invalid '+key);
+ if(p.version!==undefined&&(!Number.isSafeInteger(p.version)||p.version<1))throw new Error('Invalid version');
+ if(p.status!==undefined&&!statuses.has(p.status))throw new Error('Invalid status');
+ if(p.mail!==undefined&&(typeof p.mail!=='object'||p.mail===null||Array.isArray(p.mail)))throw new Error('Invalid mail metadata');
+ if(p.history!==undefined&&!Array.isArray(p.history))throw new Error('Invalid history');
  return p;
 }
-export async function verifyContentHash(p){const bytes=new TextEncoder().encode(p.content);const sum=await crypto.subtle.digest('SHA-256',bytes);const hex=Array.from(new Uint8Array(sum),x=>x.toString(16).padStart(2,'0')).join('');if(hex!==p.source.sha256)throw new Error('Proposal original text hash mismatch');return p;}
+export function normalizeProposal(p){
+ validateProposal(p);
+ const heading=p.content.match(/^\s*#\s+(.+)$/m)?.[1]?.trim();
+ const title=p.title?.trim()||heading||p.proposal_id;
+ return {...p,title,account:p.account?.trim()||title,
+  created_at:p.created_at||'',updated_at:p.updated_at||p.created_at||'',
+  version:p.version||1,status:p.status||'review',
+  mail:p.mail||{available:false},history:p.history||[]};
+}
+// Optional legacy diagnostic only; never a prerequisite for rendering or judging a Proposal.
+export async function verifyContentHash(p){
+ if(!p.source?.sha256)return p;
+ const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(p.content));
+ const hex=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+ if(hex!==p.source.sha256)throw new Error('Proposal text hash mismatch');
+ return p;
+}
