@@ -39,7 +39,7 @@ try{
   const proposal=JSON.parse(git('show',`origin/main:${proposalPath}`));
   const index=JSON.parse(git('show','origin/main:index.json'));
   const digest=createHash('sha256').update(proposal.content,'utf8').digest('hex');
-  if(digest!==proposal.source?.sha256||digest!==input.source?.sha256)throw new Error('Remote Proposal content hash mismatch');
+  if(digest!==proposal.source?.sha256||digest!==createHash('sha256').update(input.content,'utf8').digest('hex'))throw new Error('Remote Proposal content hash mismatch');
   if(!index.proposal_ids?.includes(input.proposal_id))throw new Error('Remote index does not contain the Proposal');
   console.log(JSON.stringify({proposal_id:input.proposal_id,version:proposal.version,commit,content_sha256:digest,remote_verified:true}));
 }catch(error){
