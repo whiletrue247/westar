@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-Hant"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://westar-proposal-api.tomben49999999.workers.dev; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>WESTAR NEXT · Proposal</title>
+<link rel="stylesheet" href="./style.css">
+</head><body>
+<div class="mobile-shade" id="shade"></div>
+<div class="shell">
+ <aside class="sidebar" id="sidebar" aria-label="提案導覽">
+  <div class="brand"><a href="#">WESTAR <span aria-hidden="true">↗</span></a><div class="sub">NEXT / PROPOSAL DESK</div></div>
+  <div class="sidebar-tools"><label for="search">搜尋提案</label><input id="search" type="search" placeholder="客戶、活動、研究名稱" autocomplete="off"><label for="filter">顯示狀態<select id="filter"><option value="">全部</option><option value="review">待審核</option><option value="sent">已寄出</option><option value="waiting">等待回覆</option><option value="rejected">不採用</option><option value="cooling">冷卻中</option></select></label></div>
+  <div class="sidebar-heading"><span>提案</span><span id="nav-count"></span></div>
+  <nav id="nav" aria-label="私人提案清單"></nav>
+  <div class="sidebar-footer"><div id="identity"></div><div class="sidebar-actions"><button id="theme" type="button">淺色</button><button id="logout" type="button" hidden>登出</button></div></div>
+ </aside>
+ <div class="main">
+  <div class="topbar"><div class="top-left"><button id="menu" type="button" aria-controls="sidebar" aria-expanded="false">☰ 提案</button><strong>WESTAR</strong><span class="mode">/ 新一代 Proposal Desk</span></div><div class="top-actions"><span class="status-line" id="status-line">私人資料需登入</span></div></div>
+  <div class="content"><div role="status" aria-live="polite" id="notice"></div>
+   <section class="login" id="login"><span class="eyebrow">RESEARCH → JUDGMENT → REVIEW</span><h1>先形成值得行動的判斷，<br>再決定下一步。</h1><p class="intro">網站是公開的，Proposal 不是。研究與商業推論保存在私人來源；登入後，才能讀取專屬的完整提案。這裡不會自動寄信。</p><div class="buttons"><button type="button" class="primary" id="signin">使用 Google 登入</button><button type="button" id="passkey">使用 Passkey 登入</button></div><p class="hint">僅限受邀成員。本站不儲存客戶提案在公開程式中。</p></section>
+   <section id="desk" hidden><div class="list-top"><div><div class="eyebrow">PRIVATE INTELLIGENCE / YOUR DECISION</div><h1>Proposal</h1><p class="intro">不限定格式，不把欄位當成商業判斷。每份提案都應有可信的證據、可被推翻的推論，以及值得你採取行動的理由。</p></div><div class="buttons"><button type="button" id="register">建立 Passkey</button><button type="button" id="refresh">重新整理</button></div></div><div id="list" aria-label="提案列表"></div><p class="empty" id="empty" hidden>目前沒有符合條件的提案。</p></section>
+   <section id="detail" hidden><button id="back" type="button">← 返回提案</button><div class="detail-head"><div class="account" id="account"></div><h1 id="title"></h1><div class="detail-meta" id="meta"></div><div class="review-toolbar"><div class="buttons"><button type="button" id="raw">查看原文</button><button type="button" id="print">列印／另存 PDF</button></div><label for="status">審核狀態<select id="status"><option value="review">待審核</option><option value="sent">已寄出</option><option value="waiting">等待回覆</option><option value="rejected">不採用</option><option value="cooling">冷卻中</option></select></label></div></div>
+    <article id="reader" class="reader" aria-label="Proposal 完整內容"></article>
+    <details class="details"><summary>版本與修改紀錄</summary><div id="history"></div></details>
+    <aside id="mail" class="mail" hidden><h3>預備信件（不會自動寄出）</h3><p class="hint">收件人：<span id="mail-recipient"></span></p><p class="hint">主旨：<span id="mail-subject"></span></p><p class="pre" id="mail-body"></p><button type="button" id="copy-mail">複製草稿</button></aside>
+   </section>
+  </div>
+ </div>
+</div>
+<script type="module" src="./app.js"></script>
+</body></html>
